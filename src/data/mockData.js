@@ -22,7 +22,7 @@ export const MENU_ITEMS = [
         name: "Fish Fry",
         price: 90,
         category: "Non-Veg",
-        image: "images/WhatsApp Image 2026-01-16 at 3.08.57 PM.jpeg",
+        image: "images/Fishfry.jpeg",
         rating: 4.3,
         isSpecial: false,
     },
@@ -31,7 +31,7 @@ export const MENU_ITEMS = [
         name: "Veg Meals",
         price: 110,
         category: "Veg",
-        image: "images/WhatsApp Image 2026-01-16 at 3.08.58 PM (2).jpeg",
+        image: "images/vegmeals.jpeg",
         rating: 4.6,
         isSpecial: false,
     },
@@ -40,9 +40,18 @@ export const MENU_ITEMS = [
         name: "Chocolate Brownie",
         price: 60,
         category: "Dessert",
-        image: "images/WhatsApp Image 2026-01-16 at 3.08.58 PM (1).jpeg",
+        image: "images/brownie.jpeg",
         rating: 4.7,
         isSpecial: false,
+    },
+    {
+        id: 6,
+        name: "Fish Curry",
+        price: 130,
+        category: "Non-Veg",
+        image: "images/fishcurry.jpg",
+        rating: 4.6,
+        isSpecial: true,
     }
 ];
 

@@ -11,7 +11,7 @@ import VotingSection from '../components/VotingSection';
 
 const StudentDashboard = () => {
     const { cart, addToCart, removeFromCart, updateQuantity, totalAmount, clearCart } = useCart();
-    const { menuItems, placeOrder, isBookingPaused, analytics } = useCanteen();
+    const { menuItems, placeOrder, isBookingPaused, analytics, orders } = useCanteen();
     const navigate = useNavigate(); // Hook for navigation
 
     // Derived Analytics from Context
@@ -26,9 +26,9 @@ const StudentDashboard = () => {
 
     // -- User Profile State --
     const [userProfile, setUserProfile] = useState({
-        name: "John Doe",
-        studentId: "#2024001",
-        email: "john@uni.edu"
+        name: localStorage.getItem('studentName') || "John Doe",
+        studentId: localStorage.getItem('studentId') || "#2024001",
+        email: localStorage.getItem('studentEmail') || "john@uni.edu"
     });
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editForm, setEditForm] = useState(userProfile);
@@ -38,7 +38,18 @@ const StudentDashboard = () => {
         ? menuItems
         : menuItems.filter(item => item.category === selectedCategory);
 
+    // Filter orders: Match by ID (preferred) or Name (legacy/fallback)
+    const myOrders = (Array.isArray(orders) && userProfile)
+        ? orders.filter(o =>
+            o.userId === userProfile.studentId ||
+            (!o.userId && o.user === userProfile.name)
+        )
+        : [];
+
+    const [activeDashboardTab, setActiveDashboardTab] = useState('menu'); // 'menu' | 'vote'
+
     const handleCheckout = () => {
+        // ... (existing checkout logic)
         if (!selectedSlot) {
             alert("Please select a time slot first!");
             return;
@@ -52,6 +63,7 @@ const StudentDashboard = () => {
             slot: selectedSlot.time,
             status: 'Pending',
             user: userProfile.name, // Use dynamic name
+            userId: userProfile.studentId, // Add student ID to order
             createdAt: new Date()
         };
 
@@ -77,6 +89,7 @@ const StudentDashboard = () => {
     };
 
     if (orderPlaced) {
+        // ... (existing order success screen)
         return (
             <div className="flex flex-col items-center justify-center h-[80vh] text-center space-y-6">
                 <motion.div
@@ -124,7 +137,23 @@ const StudentDashboard = () => {
                 </div>
             </header>
 
-            {/* Smart Queue Display */}
+            {/* Main Tabs */}
+            <div className="flex p-1 bg-white/5 rounded-xl mx-1 border border-white/10">
+                <button
+                    onClick={() => setActiveDashboardTab('menu')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeDashboardTab === 'menu' ? 'bg-primary text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                >
+                    Order Food
+                </button>
+                <button
+                    onClick={() => setActiveDashboardTab('vote')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeDashboardTab === 'vote' ? 'bg-primary text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                >
+                    Vote for Tomorrow
+                </button>
+            </div>
+
+            {/* Smart Queue Display (Always Visible) */}
             <div className="grid grid-cols-2 gap-4">
                 <motion.div
                     initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
@@ -167,52 +196,78 @@ const StudentDashboard = () => {
                 </motion.div>
             )}
 
-            {/* Category Filter */}
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {categories.map(cat => (
-                    <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-primary text-black' : 'bg-card text-gray-400 border border-white/5'}`}
-                    >
-                        {cat}
-                    </button>
-                ))}
-            </div>
+            {/* --- TAB CONTENT --- */}
 
-            {/* Voting Section */}
-            <VotingSection />
+            {activeDashboardTab === 'vote' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                    <VotingSection />
+                </motion.div>
+            )}
 
-            {/* Menu Grid */}
-            <div className="grid grid-cols-1 gap-4">
-                {filteredItems.map((item) => (
-                    <motion.div
-                        layout
-                        key={item.id}
-                        className="glass-card p-3 flex gap-4 items-center"
-                    >
-                        <img src={item.image} alt={item.name} className="h-20 w-20 object-cover rounded-lg bg-gray-800" />
-                        <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                                <h4 className="font-semibold text-white leading-tight">{item.name}</h4>
-                                <span className="text-primary font-bold">₹{item.price}</span>
-                            </div>
-                            <p className="text-gray-500 text-xs mt-1">{item.category} • ⭐ {item.rating}</p>
-
+            {activeDashboardTab === 'menu' && (
+                <>
+                    {/* Category Filter */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                        {categories.map(cat => (
                             <button
-                                onClick={() => addToCart(item)}
-                                disabled={isBookingPaused}
-                                className={`mt-3 text-xs px-3 py-2 rounded-lg transition-colors w-full ${isBookingPaused
-                                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                        : 'bg-white/10 hover:bg-white/20 text-primary'
-                                    }`}
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-primary text-black' : 'bg-card text-gray-400 border border-white/5'}`}
                             >
-                                {isBookingPaused ? 'Unavailable' : 'Add to Cart'}
+                                {cat}
                             </button>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                        ))}
+                    </div>
+
+                    {/* Menu Grid - 3 Columns */}
+                    <div className="grid grid-cols-3 gap-2 pb-24 px-1">
+                        {filteredItems.map((item) => (
+                            <motion.div
+                                layout
+                                key={item.id}
+                                className="glass-card p-1.5 flex flex-col gap-1.5 relative overflow-hidden group"
+                            >
+                                {/* Image */}
+                                <div className="h-32 w-full rounded-md bg-gray-800 overflow-hidden relative">
+                                    <img src={item.image} alt={item.name} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
+                                    <div className="absolute top-1 right-1 bg-black/60 backdrop-blur-md px-1 py-0.5 rounded text-[8px] text-white flex gap-0.5 items-center">
+                                        ⭐ {item.rating}
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex flex-col flex-1 justify-between">
+                                    <div>
+                                        <h4 className="font-semibold text-white text-xs leading-tight line-clamp-2 min-h-[2rem]">{item.name}</h4>
+                                    </div>
+
+                                    <div className="mt-1.5 flex items-center justify-between gap-1">
+                                        <span className="text-primary font-bold text-xs">₹{item.price}</span>
+                                        <button
+                                            onClick={() => {
+                                                addToCart(item);
+                                                // Show Simple Toast
+                                                const toast = document.createElement("div");
+                                                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg z-50 text-xs font-bold animate-fade-in-down";
+                                                toast.innerText = `Added ${item.name}!`;
+                                                document.body.appendChild(toast);
+                                                setTimeout(() => toast.remove(), 2000);
+                                            }}
+                                            disabled={isBookingPaused}
+                                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors ${isBookingPaused
+                                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                : 'bg-primary text-black hover:bg-white'
+                                                }`}
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </>
+            )}
 
             {/* Cart Modal */}
             <AnimatePresence>
@@ -293,8 +348,8 @@ const StudentDashboard = () => {
                                         onClick={handleCheckout}
                                         disabled={isBookingPaused}
                                         className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all text-lg ${isBookingPaused
-                                                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                                : 'bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-95 shadow-primary/20'
+                                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-primary to-secondary text-white hover:scale-[1.02] active:scale-95 shadow-primary/20'
                                             }`}
                                     >
                                         {isBookingPaused ? 'Booking Paused' : 'Pay & Book Slot'}
@@ -306,24 +361,26 @@ const StudentDashboard = () => {
                 )}
             </AnimatePresence>
 
-            {/* Student Profile Modal */}
+            {/* Student Profile Modal -- Always Available */}
             <AnimatePresence>
                 {showProfile && (
                     <>
                         <motion.div
+                            key="profile-backdrop"
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setShowProfile(false)}
-                            className="fixed inset-0 bg-black/80 z-40 backdrop-blur-sm"
+                            className="fixed inset-0 bg-black/80 z-[60] backdrop-blur-sm"
                         />
                         <motion.div
+                            key="profile-content"
                             initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-                            className="fixed top-0 bottom-0 right-0 z-50 bg-[#121212] w-3/4 max-w-sm border-l border-white/10 p-6 flex flex-col"
+                            className="fixed top-0 bottom-0 right-0 z-[70] bg-[#121212] w-3/4 max-w-sm border-l border-white/10 p-6 flex flex-col"
                         >
                             <h2 className="text-2xl font-bold text-white mb-6">My Account</h2>
 
                             <div className="bg-white/5 p-4 rounded-xl mb-6 relative group">
                                 <div className="h-16 w-16 bg-gradient-to-tr from-primary to-secondary rounded-full flex items-center justify-center text-2xl font-bold text-white mb-3 shadow-lg shadow-primary/20">
-                                    {userProfile.name.charAt(0)}
+                                    {(userProfile?.name || "U").charAt(0)}
                                 </div>
 
                                 {isEditingProfile ? (
@@ -361,9 +418,9 @@ const StudentDashboard = () => {
                                         >
                                             <Edit2 size={16} />
                                         </button>
-                                        <h3 className="font-bold text-white text-lg">{userProfile.name}</h3>
-                                        <p className="text-gray-400 text-sm">{userProfile.studentId}</p>
-                                        <p className="text-gray-500 text-xs mt-1">{userProfile.email}</p>
+                                        <h3 className="font-bold text-white text-lg">{userProfile?.name || "Guest"}</h3>
+                                        <p className="text-gray-400 text-sm">{userProfile?.studentId || "N/A"}</p>
+                                        <p className="text-gray-500 text-xs mt-1">{userProfile?.email || "No Email"}</p>
                                     </>
                                 )}
                             </div>
@@ -373,24 +430,39 @@ const StudentDashboard = () => {
                             </h3>
 
                             <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                                <div className="glass-card p-3 border-l-2 border-green-500 bg-white/5">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <span className="text-white font-medium text-sm">Chicken Biriyani</span>
-                                            <p className="text-gray-500 text-[10px] mt-0.5">Yesterday, 12:30 PM</p>
+                                {/* Filter orders for this student */}
+                                {myOrders.length === 0 ? (
+                                    <p className="text-gray-500 text-xs text-center py-4">No past orders found.</p>
+                                ) : (
+                                    myOrders.map(order => (
+                                        <div key={order.id} className={`glass-card p-3 border-l-2 ${order.status === 'Served' ? 'border-green-500 bg-white/5 opacity-60' : 'border-yellow-500 bg-white/10'}`}>
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <span className="text-white font-medium text-sm">
+                                                        {order.items && Array.isArray(order.items) ? order.items.map(i => i.name).join(", ") : "Unknown Items"}
+                                                    </span>
+                                                    <p className="text-gray-500 text-[10px] mt-0.5">
+                                                        {(() => {
+                                                            try {
+                                                                const d = order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt);
+                                                                if (isNaN(d.getTime())) return "Date Unknown";
+                                                                return d.toLocaleDateString() + ", " + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                            } catch (e) {
+                                                                return "Date Unknown";
+                                                            }
+                                                        })()}
+                                                    </p>
+                                                </div>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded border ${order.status === 'Served'
+                                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                    : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                                    }`}>
+                                                    {order.status}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="bg-green-500/10 text-green-400 text-[10px] px-2 py-0.5 rounded border border-green-500/20">Served</span>
-                                    </div>
-                                </div>
-                                <div className="glass-card p-3 border-l-2 border-green-500 bg-white/5 opacity-60">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <span className="text-white font-medium text-sm">Veg Fried Rice</span>
-                                            <p className="text-gray-500 text-[10px] mt-0.5">14 Jan, 01:00 PM</p>
-                                        </div>
-                                        <span className="bg-green-500/10 text-green-400 text-[10px] px-2 py-0.5 rounded border border-green-500/20">Served</span>
-                                    </div>
-                                </div>
+                                    ))
+                                )}
                             </div>
 
                             <div className="mt-6 space-y-3">

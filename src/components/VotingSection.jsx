@@ -21,10 +21,10 @@ const VotingSection = () => {
 
             <div className="space-y-3">
                 {pollItems.map((item, idx) => (
-                    <div key={item.name} className="flex justify-between items-center bg-black/20 p-2 rounded-lg">
+                    <div key={item.id || idx} className="flex justify-between items-center bg-black/20 p-2 rounded-lg">
                         <span className="text-sm text-gray-200">{item.name}</span>
                         <button
-                            onClick={() => voteItem(item.name)}
+                            onClick={() => voteItem(item.id)}
                             className="flex items-center gap-1 text-xs bg-white/5 hover:bg-primary hover:text-black px-2 py-1 rounded transition-colors group"
                         >
                             <ThumbsUp size={12} className="group-hover:scale-110 transition-transform" />

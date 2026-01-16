@@ -12,11 +12,7 @@ export const CanteenProvider = ({ children }) => {
     const [menuItems, setMenuItems] = useState(INITIAL_MENU);
     const [orders, setOrders] = useState([]);
     const [isBookingPaused, setIsBookingPaused] = useState(false);
-    const [pollItems, setPollItems] = useState([
-        { name: 'Ghee Roast', votes: 120 },
-        { name: 'Aloo Paratha', votes: 85 },
-        { name: 'Chilly Chicken', votes: 102 }
-    ]);
+    const [pollItems, setPollItems] = useState([]);
 
     // --- Firestore Real-Time Sync ---
     useEffect(() => {
@@ -27,8 +23,12 @@ export const CanteenProvider = ({ children }) => {
             if (freshOrders.length > 0) setOrders(freshOrders);
         }, (err) => console.log("Firestore connection failed (using mock):", err));
 
-        // 2. Sync Menu (Optional: You can create a 'menu' collection in Firebase to make it dynamic)
-        // For now, we keep menu local-first to ensure icons/images work easily without storage setup
+        // 2. Sync Polls
+        const pollQuery = query(collection(db, 'polls'), orderBy('votes', 'desc'));
+        const unsubPolls = onSnapshot(pollQuery, (snapshot) => {
+            const freshPolls = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPollItems(freshPolls);
+        });
 
         // 3. Sync Settings (Booking Paused Status)
         const settingsRef = doc(db, 'settings', 'config');
@@ -40,17 +40,66 @@ export const CanteenProvider = ({ children }) => {
 
         return () => {
             unsubOrders();
+            unsubPolls();
             unsubSettings();
         };
     }, []);
 
     // --- Actions ---
 
-    // Voting Logic (Mock for now, can move to DB)
-    const voteItem = (itemName) => {
-        setPollItems(prev => prev.map(item =>
-            item.name === itemName ? { ...item, votes: item.votes + 1 } : item
-        ));
+    // Voting Logic
+    const voteItem = async (itemId) => {
+        // Check local storage to see if user already voted for this item (or any item if strict one vote per day)
+        // Let's implement one vote per item for simplicity, or we can do one vote total. 
+        // User asked: "each student has to be able to vote for items only once" - usually means one vote per poll or one vote per item.
+        // Let's assume one vote per item is allowed, but you can't vote twice for the SAME item.
+
+        const votedItems = JSON.parse(localStorage.getItem('votedPolls') || '[]');
+
+        if (votedItems.includes(itemId)) {
+            alert("You have already voted for this item!");
+            return;
+        }
+
+        try {
+            const itemRef = doc(db, 'polls', itemId);
+            // We need to read the current votes first or use increment. 
+            // Increment is safer but let's just use the local state update pattern via firestore update
+            // actually updateDoc with increment is best but to avoid imports let's just read/write or simple update
+
+            // Simple increment approach:
+            const item = pollItems.find(i => i.id === itemId);
+            if (item) {
+                await updateDoc(itemRef, { votes: item.votes + 1 });
+
+                // Save to local storage
+                localStorage.setItem('votedPolls', JSON.stringify([...votedItems, itemId]));
+            }
+        } catch (e) {
+            console.error("Error voting:", e);
+        }
+    };
+
+    // Poll Management
+    const addPollItem = async (name) => {
+        try {
+            await addDoc(collection(db, 'polls'), {
+                name: name,
+                votes: 0,
+                createdAt: new Date().toISOString()
+            });
+            alert("Poll item added successfully!");
+        } catch (e) {
+            console.error("Error adding poll:", e);
+        }
+    };
+
+    const deletePollItem = async (id) => {
+        try {
+            await deleteDoc(doc(db, 'polls', id));
+        } catch (e) {
+            console.error("Error deleting poll:", e);
+        }
     };
 
     // Order Logic (Push to Firebase)
@@ -92,11 +141,6 @@ export const CanteenProvider = ({ children }) => {
         setMenuItems(prev => prev.filter(item => item.id !== id));
     };
 
-    // Poll Management
-    const addPollItem = (name) => {
-        setPollItems(prev => [...prev, { name, votes: 0 }]);
-    };
-
     // Settings Management
     const toggleBookingStatus = async (status) => {
         setIsBookingPaused(status);
@@ -135,7 +179,7 @@ export const CanteenProvider = ({ children }) => {
             menuItems, addMenuItem, deleteMenuItem,
             orders, placeOrder, markOrderServed,
             isBookingPaused, setIsBookingPaused: toggleBookingStatus,
-            pollItems, voteItem, addPollItem,
+            pollItems, voteItem, addPollItem, deletePollItem,
             analytics: {
                 pendingOrdersCount,
                 estimatedWaitTime,
@@ -144,8 +188,9 @@ export const CanteenProvider = ({ children }) => {
                 totalRevenue,
                 totalOrders
             }
-        }}>
+        }
+        } >
             {children}
-        </CanteenContext.Provider>
+        </CanteenContext.Provider >
     );
 };

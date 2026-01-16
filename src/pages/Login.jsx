@@ -23,6 +23,10 @@ const Login = () => {
             }
         } else {
             // Student Login (Mock)
+            // Save to localStorage for persistence
+            const cleanId = credentials.id ? credentials.id.trim() : 'Guest';
+            localStorage.setItem('studentId', cleanId);
+            localStorage.setItem('studentName', cleanId.split('@')[0]);
             navigate('/student');
         }
     };

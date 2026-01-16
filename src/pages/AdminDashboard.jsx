@@ -3,13 +3,41 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, QrCode, Utensils, AlertTriangle, CheckCircle, Clock, Plus, Trash2, TrendingUp, DollarSign, User, LogOut, Edit2, Save, X } from 'lucide-react';
 import { useCanteen } from '../context/CanteenContext';
 import { useNavigate } from 'react-router-dom';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import { useEffect } from 'react';
+
+// Isolated Scanner Component to handle DOM lifecycle
+const ScannerComponent = ({ onScan, onError }) => {
+    useEffect(() => {
+        const scanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            /* verbose= */ false
+        );
+
+        scanner.render(
+            (decodedText) => {
+                onScan(decodedText);
+            },
+            (errorMessage) => {
+                // Ignore errors while scanning (common in video stream)
+            }
+        );
+
+        return () => {
+            scanner.clear().catch(error => console.error("Failed to clear html5-qrcode scanner. ", error));
+        };
+    }, []);
+
+    return <div id="reader" className="w-full"></div>;
+};
 
 const AdminDashboard = () => {
     const {
         menuItems, addMenuItem, deleteMenuItem,
         orders, markOrderServed,
         isBookingPaused, setIsBookingPaused,
-        addPollItem,
+        addPollItem, deletePollItem, pollItems,
         analytics
     } = useCanteen();
     const navigate = useNavigate();
@@ -56,10 +84,47 @@ const AdminDashboard = () => {
         if (pending) {
             markOrderServed(pending.id);
             setScannerResult(`Success! Order ${pending.id} Served.`);
-            setTimeout(() => setShowScanner(false), 1500);
+            // setTimeout(() => setShowScanner(false), 1500); 
         } else {
             setScannerResult("No pending orders to scan.");
         }
+    };
+
+    const handleScan = (data) => {
+        if (data) {
+            try {
+                // The QR code contains JSON string like: {"orderId":"ORD-170..."}
+                // or sometimes it might just be the text depending on how we generated it. 
+                // Let's assume it handles both just in case.
+                const parsed = JSON.parse(data.text || data);
+                const orderId = parsed.orderId;
+
+                setScannerResult(`Scanned: ${orderId}... Verifying`);
+
+                const order = orders.find(o => o.id === orderId);
+                if (order) {
+                    if (order.status === 'Pending') {
+                        markOrderServed(orderId);
+                        setScannerResult(`✅ Success! Order ${orderId} Served.`);
+                        // Optional: Close after success
+                        // setTimeout(() => setShowScanner(false), 2000);
+                    } else {
+                        setScannerResult(`⚠️ Order ${orderId} is already served.`);
+                    }
+                } else {
+                    setScannerResult(`❌ Invalid Order ID: ${orderId}`);
+                }
+            } catch (e) {
+                // Fallback if not JSON
+                console.log("Scan Error or Non-JSON:", e);
+                setScannerResult("Searching...");
+            }
+        }
+    };
+
+    const handleError = (err) => {
+        console.error(err);
+        setScannerResult("Camera Error: " + err.message);
     };
 
     const handleSaveProfile = () => {
@@ -215,6 +280,30 @@ const AdminDashboard = () => {
 
                     <div className="border-t border-white/10 pt-4">
                         <h3 className="font-bold text-white mb-2">Next Day Poll</h3>
+
+                        {/* Poll List */}
+                        <div className="space-y-2 mb-4">
+                            {pollItems.length === 0 ? (
+                                <p className="text-gray-500 text-xs">No active polls.</p>
+                            ) : (
+                                pollItems.map(poll => (
+                                    <div key={poll.id} className="bg-white/5 p-2 rounded flex justify-between items-center group">
+                                        <div>
+                                            <p className="text-white text-sm">{poll.name}</p>
+                                            <p className="text-[10px] text-gray-500">{poll.votes} votes</p>
+                                        </div>
+                                        <button
+                                            onClick={() => deletePollItem(poll.id)}
+                                            className="text-red-400 opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                                            title="Delete Poll"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
                         <div className="flex gap-2">
                             <input value={pollName} onChange={e => setPollName(e.target.value)} placeholder="Poll Item Name" className="flex-1 bg-black/20 border border-white/10 rounded p-2 text-white" />
                             <button onClick={() => { addPollItem(pollName); setPollName("") }} className="bg-secondary p-2 rounded text-white">Add</button>
@@ -264,23 +353,27 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* Mock Scanner Modal */}
+            {/* Real Scanner Modal */}
+            {/* Real Scanner Modal with html5-qrcode */}
             <AnimatePresence>
                 {showScanner && (
                     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
-                        <div className="w-64 h-64 border-2 border-primary rounded-xl relative flex items-center justify-center overflow-hidden">
+                        <div className="w-full max-w-sm border-2 border-primary rounded-xl relative flex flex-col items-center justify-center overflow-hidden bg-black min-h-[300px]">
+                            {/* Scanner Container */}
+                            <ScannerComponent onScan={handleScan} onError={handleError} />
+
+                            {/* Scanning Overlay Animation */}
                             <motion.div
                                 animate={{ top: ["0%", "100%", "0%"] }}
                                 transition={{ duration: 2, repeat: Infinity }}
-                                className="absolute left-0 right-0 h-1 bg-primary shadow-[0_0_20px_#00E0FF]"
+                                className="absolute left-0 right-0 h-1 bg-primary shadow-[0_0_20px_#00E0FF] pointer-events-none"
                             />
-                            <p className="text-white/50 text-sm">Align QR Code</p>
                         </div>
-                        <p className="text-white mt-4 font-bold">{scannerResult || "Scanning..."}</p>
+                        <p className="text-white mt-4 font-bold text-center">{scannerResult || "Align Order QR Code"}</p>
 
                         <div className="flex gap-4 mt-8">
-                            <button onClick={handleSimulateScan} className="px-6 py-2 bg-green-500 rounded-lg text-black font-bold">Simulate Detection</button>
-                            <button onClick={() => setShowScanner(false)} className="px-6 py-2 bg-white/10 rounded-lg text-white">Cancel</button>
+                            <button onClick={handleSimulateScan} className="px-4 py-2 bg-white/5 rounded-lg text-gray-400 text-xs">Simulate (Test)</button>
+                            <button onClick={() => { setShowScanner(false); setScannerResult(""); }} className="px-6 py-2 bg-white/10 rounded-lg text-white">Close Scanner</button>
                         </div>
                     </div>
                 )}
