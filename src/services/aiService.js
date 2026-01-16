@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ⚠️ REPLACE WITH YOUR ACTUAL API KEY
-const API_KEY = "AIzaSyCwDc9_b10ndEPVNeB4yS8JDdX4ZtFYPv0";
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const SYSTEM_PROMPT = `You are a friendly and helpful AI assistant for a college canteen called "PrePlate".

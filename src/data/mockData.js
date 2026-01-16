@@ -11,7 +11,7 @@ export const MENU_ITEMS = [
     {
         id: 2,
         name: "Half Chicken Biriyani",
-        price: 120,
+        price: 50,
         category: "Main Course",
         image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?q=80&w=1000&auto=format&fit=crop",
         rating: 4.5,
@@ -20,7 +20,7 @@ export const MENU_ITEMS = [
     {
         id: 3,
         name: "Fish Fry",
-        price: 90,
+        price: 30,
         category: "Non-Veg",
         image: "images/Fishfry.jpeg",
         rating: 4.3,
@@ -29,7 +29,7 @@ export const MENU_ITEMS = [
     {
         id: 4,
         name: "Veg Meals",
-        price: 110,
+        price: 40,
         category: "Veg",
         image: "images/vegmeals.jpeg",
         rating: 4.6,
@@ -47,7 +47,7 @@ export const MENU_ITEMS = [
     {
         id: 6,
         name: "Fish Curry",
-        price: 130,
+        price: 90,
         category: "Non-Veg",
         image: "images/fishcurry.jpg",
         rating: 4.6,
