@@ -3,7 +3,10 @@
 **PrePlate** is a modern, full-stack web application designed to revolutionize the college canteen experience. It streamlines food ordering, reduces wait times with smart queue management, and engages students through voting and AI assistance.
 
 Built for **Google Developer Groups (GDG) Hackathon
-Check it out at https://college-canteen-app.vercel.app/**.
+
+## Website Link
+
+Check it out at https://college-canteen-app.vercel.app/
 
 ## Features
 
@@ -38,3 +41,26 @@ Check it out at https://college-canteen-app.vercel.app/**.
 - **Sruthy Krishna** 
 - **Vaishnavi Rajesh**
 - **Vrinda P** 
+
+## 📸 Screenshots
+
+### Main Student Dashboard
+![Student Dashboard](public/images/studentPage.png)
+
+### Student Cart
+![Student Cart](public/images/student_cart.png)
+
+### Student QR Code
+![QR Code](public/images/studentQR.png)
+
+### Student Vote
+![Student Vote](public/images/studentVote.png)
+
+### Admin Dashboard
+![Admin Dashboard](public/images/adminPage.png)
+
+### Admin Menu (edit)
+![Edit Menu](public/images/editMenu.png)
+
+### Admin QR Scanner
+![QR Scanner](public/images/adminScan.png)
