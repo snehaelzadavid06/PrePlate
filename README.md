@@ -6,7 +6,7 @@ Built for **Google Developer Groups (GDG) Hackathon
 
 ## Website Link
 
-Check it out at https://college-canteen-app.vercel.app/
+Check it out at https://preplate-291c8.web.app/
 
 ## Features
 
